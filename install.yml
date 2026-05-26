@@ -1,0 +1,75 @@
+---
+- name: Install Kerio
+  hosts: windows
+
+  tasks:
+
+
+
+  - name: Download kerio to VM
+    ansible.windows.win_copy:
+      src: files/kerio-control-vpnclient-9.3.6-5808-p1-win64.msi
+      dest: 'C:\Windows\Temp\kerio-control-vpnclient-9.3.6-5808-p1-win64.msi'
+
+  - name: Install kerio
+    ansible.windows.win_package:
+      path: 'C:\Windows\Temp\kerio-control-vpnclient-9.3.6-5808-p1-win64.msi'
+      state: present
+  - name: Install Chocolatey
+    ansible.windows.win_powershell:
+      script: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+  - name: Install Soft
+    chocolatey.chocolatey.win_chocolatey:
+      name: 
+        - 7zip
+        - winrar
+        - anydesk
+        - teamviewer
+
+      state: present
+  - name : Install office2019proplus
+    chocolatey.chocolatey.win_chocolatey:
+      name: office2019proplus
+      state: present
+  - name: Install Google Chrome
+    chocolatey.chocolatey.win_chocolatey:
+      name: googlechrome
+      state: present
+      ignore_checksums: true
+   
+  - name: Disable Antivirus
+    ansible.windows.win_powershell:
+      script: |
+        Add-MpPreference -ExclusionPath "C:\Windows\Temp"
+
+        Set-MpPreference -DisableRealtimeMonitoring $true -DisableIOAVProtection $true
+
+  - name: Download MAS script
+    ansible.windows.win_get_url:
+      url: {{mas_url}}
+      force: yes
+
+  - name: Activate Windows (HWID)
+    ansible.windows.win_powershell:
+      script: |
+        if (Test-Path "C:\Windows\Temp\MAS_AIO.cmd") {
+            Start-Process -FilePath "C:\Windows\Temp\MAS_AIO.cmd" -ArgumentList "/HWID" -Wait -NoNewWindow
+        } else {
+            Throw "File not found"
+        }
+
+  - name: Activate Office (Ohook)
+    ansible.windows.win_powershell:
+      script: |
+        if (Test-Path "C:\Windows\Temp\MAS_AIO.cmd") {
+            Start-Process -FilePath "C:\Windows\Temp\MAS_AIO.cmd" -ArgumentList "/Ohook" -Wait -NoNewWindow
+        }
+  - name: Delete MAS Script
+    ansible.windows.win_powershell:
+      script: |
+        if (Test-Path "C:\Windows\Temp\MAS_AIO.cmd") {
+            Remove-Item "C:\Windows\Temp\MAS_AIO.cmd" -Force
+        }
+
+        Remove-MpPreference -ExclusionPath "C:\Windows\Temp"
+        Set-MpPreference -DisableRealtimeMonitoring $false -DisableIOAVProtection $false
