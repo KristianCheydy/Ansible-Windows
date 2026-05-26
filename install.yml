@@ -47,6 +47,7 @@
   - name: Download MAS script
     ansible.windows.win_get_url:
       url: {{mas_url}}
+      dest: 'C:\Windows\Temp\MAS_AIO.cmd'
       force: yes
 
   - name: Activate Windows (HWID)
